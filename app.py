@@ -402,14 +402,10 @@ with st.expander("📋 Instructions"):
     
     ### CSV Requirements:
     - Get class schedule data from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
-    - On the website, choose the appropriate semester, then choose "Biology" as the department. Click submit to see the class schedules. 
-    - Copy the data from the "CRN:" to the "Location:" column. Make sure to select all the data, including the last class on the list. Do NOT include "Your query returned xxx records."
+    - On the website, choose the appropriate semester, then choose "Biology" as the Department. Click submit to see the class schedule. 
+    - Copy the data from the "CRN:" to the "Location:" column. Make sure to select all the data, including the last class on the list. Do NOT include the "Your query returned xxx records." line.
     - Paste the data into Excel. Save it as a .csv file. 
     
     ### Output:
     - Formatted Word document with a professional table layout
     """)
-
-# Footer
-st.markdown("---")
-st.markdown("*Biology Lab Room Chart Generator - Built with Streamlit*")
