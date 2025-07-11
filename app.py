@@ -410,5 +410,5 @@ with st.expander("📋 Instructions"):
     - Paste into Excel and save as a .csv file
     
     ### Output:
-    - Formatted Word document with a professional table layout
+    - Formatted Room Use Chart in a Word document
     """)
