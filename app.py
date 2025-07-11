@@ -355,6 +355,9 @@ with col2:
 if year < 2020 or year > 2100:
     st.warning("Please enter a valid year between 2020 and 2100")
 
+# Set target rooms (no user selection needed)
+target_rooms = [225, 227, 229, 242, 325, 327, 330, 429]
+
 # File upload
 uploaded_file = st.file_uploader(
     "Upload your CSV file",
