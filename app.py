@@ -107,7 +107,7 @@ def is_before_noon(time_str):
     except:
         return False
 
-def process_csv_and_generate_doc(uploaded_file, target_rooms):
+def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
     """Process the CSV file and generate the Word document"""
     try:
         # Load the CSV file with multi-level headers
@@ -188,8 +188,9 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms):
         section.left_margin = Inches(0.5)
         section.right_margin = Inches(0.5)
         
-        # Create title
-        title = doc.add_heading("Room Use Chart for the Biology Laboratories", level=1)
+        # Create title with semester and year
+        title_text = f"{semester} {year} Room Use Chart for the Biology Laboratories"
+        title = doc.add_heading(title_text, level=1)
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         title.runs[0].font.name = 'Times New Roman'
         title.runs[0].font.size = Pt(20)
@@ -332,6 +333,28 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms):
 # Streamlit UI
 st.sidebar.header("Settings")
 
+# Semester and Year selection
+st.sidebar.subheader("Semester & Year")
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    semester = st.selectbox(
+        "Semester:",
+        options=["Spring", "Fall"],
+        index=0
+    )
+with col2:
+    year = st.number_input(
+        "Year:",
+        min_value=2020,
+        max_value=2100,
+        value=2025,
+        step=1
+    )
+
+# Add validation
+if year < 2020 or year > 2100:
+    st.warning("Please enter a valid year between 2020 and 2100")
+
 # Room selection
 st.sidebar.subheader("Select Target Rooms")
 default_rooms = [225, 227, 229, 242, 325, 327, 330, 429]
@@ -358,18 +381,21 @@ if uploaded_file is not None:
     if st.button("Generate Room Chart", type="primary"):
         if not target_rooms:
             st.error("Please select at least one room.")
+        elif year < 2020 or year > 2100:
+            st.error("Please enter a valid year between 2020 and 2100 before generating the chart.")
         else:
             with st.spinner("Processing CSV and generating Word document..."):
-                doc_buffer, num_entries = process_csv_and_generate_doc(uploaded_file, target_rooms)
+                doc_buffer, num_entries = process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year)
                 
                 if doc_buffer is not None:
                     st.success(f"Document generated successfully! Found {num_entries} class entries.")
                     
-                    # Download button
+                    # Download button with dynamic filename
+                    filename = f"{semester}_{year}_room_use_chart.docx"
                     st.download_button(
                         label="📥 Download Room Chart (Word Document)",
                         data=doc_buffer,
-                        file_name="room_use_chart.docx",
+                        file_name=filename,
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                 else:
@@ -381,19 +407,18 @@ with st.expander("📋 Instructions"):
     ### How to use this tool:
     
     1. **Upload your CSV file** using the file uploader above
-    2. **Select target rooms** from the sidebar (default rooms are pre-selected)
+    2. **Input the semester** from the sidebar
     3. **Click "Generate Room Chart"** to process the data
     4. **Download the Word document** using the download button
     
     ### CSV Requirements:
-    - Must have multi-level headers
-    - Should contain columns for course numbers, titles, instructors, times, days, and locations
-    - Room numbers should be extractable from the location column
+    - **Get class schedule data** from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
+    - On that website, choose the appropriate semester, then choose "Biology" as the department. Click submit to see the class schedules. 
+    - **Copy the data** from the "CRN:" to the "Location:" column. Make sure to select all the data, including the last class on the list. Do NOT include the "Your query returned xxx records." line. 
+    - **Paste the data into Excel. Save it as a .csv file.** 
     
     ### Output:
-    - Formatted Word document in landscape orientation
-    - Color-coded classes (Blue for morning, Green for afternoon)
-    - Professional table layout with proper spacing
+    - Formatted Word document with a professional table layout
     """)
 
 # Footer
