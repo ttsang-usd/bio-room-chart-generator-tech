@@ -355,14 +355,8 @@ with col2:
 if year < 2020 or year > 2100:
     st.warning("Please enter a valid year between 2020 and 2100")
 
-# Room selection
-st.sidebar.subheader("Select Target Rooms")
-default_rooms = [225, 227, 229, 242, 325, 327, 330, 429]
-target_rooms = st.sidebar.multiselect(
-    "Choose rooms to include in the chart:",
-    options=default_rooms,
-    default=default_rooms
-)
+# Set target rooms (no user selection needed)
+target_rooms = [225, 227, 229, 242, 325, 327, 330, 429]
 
 # File upload
 uploaded_file = st.file_uploader(
@@ -379,9 +373,7 @@ if uploaded_file is not None:
     
     # Process button
     if st.button("Generate Room Chart", type="primary"):
-        if not target_rooms:
-            st.error("Please select at least one room.")
-        elif year < 2020 or year > 2100:
+        if year < 2020 or year > 2100:
             st.error("Please enter a valid year between 2020 and 2100 before generating the chart.")
         else:
             with st.spinner("Processing CSV and generating Word document..."):
@@ -412,10 +404,10 @@ with st.expander("📋 Instructions"):
     4. **Download the Word document** using the download button
     
     ### CSV Requirements:
-    - **Get class schedule data** from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
+    - Get class schedule data from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
     - On that website, choose the appropriate semester, then choose "Biology" as the department. Click submit to see the class schedules. 
-    - **Copy the data** from the "CRN:" to the "Location:" column. Make sure to select all the data, including the last class on the list. Do NOT include the "Your query returned xxx records." line. 
-    - **Paste the data into Excel. Save it as a .csv file.** 
+    - Copy the data from the "CRN:" to the "Location:" column. Make sure to select all the data, including the last class on the list. Do NOT include "Your query returned xxx records."
+    - Paste the data into Excel. Save it as a .csv file. 
     
     ### Output:
     - Formatted Word document with a professional table layout
