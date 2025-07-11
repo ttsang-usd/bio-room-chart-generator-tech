@@ -17,7 +17,7 @@ st.set_page_config(
 
 # Title and description
 st.title("🧪 Biology Lab Room Chart Generator")
-st.markdown("Upload your CSV file to generate a formatted Word document room schedule chart. /n Specify the semester and year on the left sidebar.")
+st.markdown("Upload your CSV file to generate a Room Use Chart as a Word document. Specify the semester and year on the left sidebar.")
 
 # Helper functions (same as your original code)
 def parse_time(time_str):
