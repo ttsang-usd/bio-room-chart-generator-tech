@@ -355,9 +355,6 @@ with col2:
 if year < 2020 or year > 2100:
     st.warning("Please enter a valid year between 2020 and 2100")
 
-# Set target rooms (no user selection needed)
-target_rooms = [225, 227, 229, 242, 325, 327, 330, 429]
-
 # File upload
 uploaded_file = st.file_uploader(
     "Upload your CSV file",
@@ -405,7 +402,7 @@ with st.expander("📋 Instructions"):
     
     ### CSV Requirements:
     - Get class schedule data from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
-    - On that website, choose the appropriate semester, then choose "Biology" as the department. Click submit to see the class schedules. 
+    - On the website, choose the appropriate semester, then choose "Biology" as the department. Click submit to see the class schedules. 
     - Copy the data from the "CRN:" to the "Location:" column. Make sure to select all the data, including the last class on the list. Do NOT include "Your query returned xxx records."
     - Paste the data into Excel. Save it as a .csv file. 
     
