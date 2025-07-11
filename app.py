@@ -397,19 +397,17 @@ if uploaded_file is not None:
 with st.expander("📋 Instructions"):
     st.markdown("""
     ### How to use this tool:
-    
-    1. **Upload your CSV file** using the file uploader above
-    2. **Input the semester** from the sidebar
-    3. **Click "Generate Room Chart"** to process the data
-    4. **Download the Word document** using the download button
-    5. **Verify the chart** by checking against the original list of course schedules. 
-    6. **Make final formatting edits** before printing.
+    1. Upload your CSV file above
+    2. Select the semester in the sidebar
+    3. Click "Generate Room Chart"
+    4. Download the Word document
+    5. Review & Finalize: cross-check with the original schedule and make final edits
     
     ### How to create the CSV file:
-    - Get class schedule data from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
-    - On the website, choose the appropriate semester, then choose "Biology" as the Department. Click submit to see the class schedule. 
-    - Copy the data from the "CRN:" to the "Location:" column. Make sure to select all the data, including the last class on the list. Do NOT include the "Your query returned xxx records." line.
-    - Paste the data into Excel. Save it as a .csv file. 
+    - Get class schedule from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
+    - Select the semester and "Biology" as the department, then click Submit
+    - Copy all data from the "CRN:" to the "Location:" column. 
+    - Paste into Excel and save as a .csv file
     
     ### Output:
     - Formatted Word document with a professional table layout
