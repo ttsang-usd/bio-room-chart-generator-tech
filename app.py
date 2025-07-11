@@ -402,6 +402,8 @@ with st.expander("📋 Instructions"):
     2. **Input the semester** from the sidebar
     3. **Click "Generate Room Chart"** to process the data
     4. **Download the Word document** using the download button
+    5. **Verify the chart** by checking against the original list of course schedules. 
+    6. **Make final formatting edits** before printing.
     
     ### How to create the CSV file:
     - Get class schedule data from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
