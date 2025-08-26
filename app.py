@@ -21,25 +21,24 @@ st.title("🧪 Biology Lab Room Chart Generator")
 st.markdown("Upload your CSV or Excel file to generate a Room Use Chart as a Word document. Specify the semester and year on the left sidebar.")
 
 # Helper functions
-def parse_time(time_val):
-    if pd.isna(time_val) or time_val == '':
+def parse_time(time_str):
+    """Parses time from a string, handles 'HH:MM:SS' and 'H:MM AM/PM'."""
+    if pd.isna(time_str) or time_str == '':
         return None
-    
-    if isinstance(time_val, datetime.time):
-        return time_val.hour * 60 + time_val.minute
-
-    if isinstance(time_val, str):
-        try:
-            time, period = time_val.strip().split(' ')
+    try:
+        if len(time_str.split(':')) == 3:  # Excel format '14:30:00'
+            h, m, s = map(int, time_str.split(':'))
+            return h * 60 + m
+        else:  # CSV format '2:30 PM'
+            time, period = time_str.strip().split(' ')
             hours, minutes = map(int, time.split(':'))
             if period.upper() == 'PM' and hours != 12:
                 hours += 12
             if period.upper() == 'AM' and hours == 12:
                 hours = 0
             return hours * 60 + minutes
-        except:
-            return None
-    return None
+    except Exception:
+        return None
 
 def extract_room_number(location):
     if pd.isna(location) or location == '':
@@ -54,20 +53,20 @@ def extract_last_name(instructor):
         return 'RECART'
     return instructor.strip().split(' ')[-1].upper()
 
-def format_time(time_val):
-    if pd.isna(time_val) or time_val == '':
+def format_time(time_str):
+    """Formats a time string for display, removing AM/PM and seconds."""
+    if pd.isna(time_str) or time_str == '':
         return ''
-    
-    if isinstance(time_val, datetime.time):
-        formatted_time = time_val.strftime('%I:%M')
-        if formatted_time.startswith('0'):
-            return formatted_time[1:]
-        return formatted_time
-
-    if isinstance(time_val, str):
-        return re.sub(r'\s*(AM|PM)', '', time_val, flags=re.IGNORECASE)
-
-    return str(time_val)
+    try:
+        if len(time_str.split(':')) == 3: # Excel format '14:30:00'
+            h, m, s = map(int, time_str.split(':'))
+            if h == 0: return f"12:{m:02d}"
+            if h < 13: return f"{h}:{m:02d}"
+            return f"{h-12}:{m:02d}"
+        else: # CSV format '2:30 PM'
+            return re.sub(r'\s*(AM|PM)', '', time_str, flags=re.IGNORECASE)
+    except Exception:
+        return time_str # Fallback
 
 def abbreviate_title(title):
     if pd.isna(title) or title == '':
@@ -107,28 +106,24 @@ def expand_days(days_str):
     mapping = {'M': 'Mon', 'T': 'Tue', 'W': 'Wed', 'R': 'Thu', 'F': 'Fri', 'S': 'Sat', 'U': 'Sun'}
     return [mapping[c] for c in str(days_str) if c in mapping]
 
-def is_before_noon(time_val):
-    if pd.isna(time_val) or time_val == '':
+def is_before_noon(time_str):
+    """Checks if a time is before noon, handles both string formats."""
+    if pd.isna(time_str) or time_str == '':
         return False
-
-    if isinstance(time_val, datetime.time):
-        return time_val.hour < 12
-
-    if isinstance(time_val, str):
-        try:
-            time_parts = time_val.strip().split(' ')
-            if len(time_parts) < 2: return False
-            time_part = time_parts[0]
-            period = time_parts[1].upper()
-            hours, minutes = map(int, time_part.split(':'))
-            if period == 'PM' and hours != 12:
+    try:
+        if len(time_str.split(':')) == 3: # Excel format '14:30:00'
+            h, m, s = map(int, time_str.split(':'))
+            return h < 12
+        else: # CSV format '2:30 PM'
+            time, period = time_str.strip().split(' ')
+            hours, minutes = map(int, time.split(':'))
+            if period.upper() == 'PM' and hours != 12:
                 hours += 12
-            elif period == 'AM' and hours == 12:
+            if period.upper() == 'AM' and hours == 12:
                 hours = 0
             return hours < 12
-        except:
-            return False
-    return False
+    except Exception:
+        return False
 
 def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
     """Process the CSV or Excel file and generate the Word document"""
@@ -142,10 +137,8 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
             return None, 0
         
         df.columns = [f"{a} {b}".strip() if not pd.isna(a) and not pd.isna(b) else (a or b) for a, b in df.columns]
-        
-        df[['Course Number:', 'Title: Unnamed: 3_level_1', 'Instructors: Unnamed: 14_level_1']] = df[['Course Number:', 'Title: Unnamed: 3_level_1', 'Instructors: Unnamed: 14_level_1']].ffill()
-        df = df[df['Seats Remaining:'] != 'CLOSED']
-        
+
+        # Define columns to be processed
         location_col = 'Location: Unnamed: 15_level_1'
         course_col = 'Course Number:'
         title_col = 'Title: Unnamed: 3_level_1'
@@ -154,36 +147,34 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
         end_col = 'End Time:'
         instructor_col = 'Instructors: Unnamed: 14_level_1'
         
+        # === NEW: Force convert all processing columns to strings to prevent type errors ===
+        for col in [location_col, course_col, title_col, days_col, begin_col, end_col, instructor_col]:
+            if col in df.columns:
+                df[col] = df[col].astype(str)
+        
+        df[['Course Number:', 'Title: Unnamed: 3_level_1', 'Instructors: Unnamed: 14_level_1']] = df[['Course Number:', 'Title: Unnamed: 3_level_1', 'Instructors: Unnamed: 14_level_1']].ffill()
+        df = df[df['Seats Remaining:'] != 'CLOSED']
+        
         entries = []
         
-        # This new try/except block will catch the failing row
-        try:
-            for index, row in df.iterrows():
-                room = extract_room_number(row.get(location_col))
-                if room not in target_rooms:
-                    continue
-                days = expand_days(row.get(days_col))
-                for day in days:
-                    entries.append({
-                        'Day': day,
-                        'Room': room,
-                        'Course_Number': str(row.get(course_col)).replace('BIOL', 'BIO'),
-                        'Title': abbreviate_title(row.get(title_col)),
-                        'Begin_Time': format_time(row.get(begin_col)),
-                        'End_Time': format_time(row.get(end_col)),
-                        'Instructors': extract_last_name(row.get(instructor_col)),
-                        'Begin_Time_Parsed': parse_time(row.get(begin_col)),
-                        'Begin_Time_Original': row.get(begin_col)
-                    })
-        except Exception as e:
-            st.error(f"### 🚨 An error occurred while processing the data.")
-            st.error(f"**Error message:** `{str(e)}`")
-            st.error(f"This likely happened on **row {index + 2}** of your Excel file.")
-            st.warning("**Dumping data from the row that caused the error:**")
-            # Convert the row to a dictionary for clean printing, handling potential datetime objects
-            st.json({k: str(v) for k, v in row.to_dict().items()})
-            return None, 0
-
+        for _, row in df.iterrows():
+            room = extract_room_number(row.get(location_col))
+            if room not in target_rooms:
+                continue
+            days = expand_days(row.get(days_col))
+            for day in days:
+                entries.append({
+                    'Day': day,
+                    'Room': room,
+                    'Course_Number': str(row.get(course_col)).replace('BIOL', 'BIO'),
+                    'Title': abbreviate_title(row.get(title_col)),
+                    'Begin_Time': format_time(row.get(begin_col)),
+                    'End_Time': format_time(row.get(end_col)),
+                    'Instructors': extract_last_name(row.get(instructor_col)),
+                    'Begin_Time_Parsed': parse_time(row.get(begin_col)),
+                    'Begin_Time_Original': row.get(begin_col)
+                })
+        
         day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         entries.sort(key=lambda x: (day_order.index(x['Day']), x['Room'], x['Begin_Time_Parsed'] or 0))
         
@@ -192,11 +183,11 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
         chart_rows = []
         
         for day in days_present:
-            row = {'Day': day}
+            row_data = {'Day': day}
             for room in rooms_sorted:
                 classes = [e for e in entries if e['Day'] == day and e['Room'] == room]
-                row[f'ST{room}'] = classes if classes else ''
-            chart_rows.append(row)
+                row_data[f'ST{room}'] = classes if classes else ''
+            chart_rows.append(row_data)
         
         chart_df = pd.DataFrame(chart_rows)
         
@@ -208,67 +199,48 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
         title_text = f"{semester} {year} Room Use Chart for the Biology Laboratories"
         title = doc.add_heading(title_text, level=1)
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        # Font settings... (rest of the document generation is the same)
+        title.runs[0].font.name = 'Times New Roman'
+        title.runs[0].font.size = Pt(20)
         
-        # (The rest of your Word document generation code is unchanged)
-        # Create table
         table = doc.add_table(rows=1, cols=len(chart_df.columns))
         table.style = 'Table Grid'
         table.autofit = False
         table.allow_autofit = False
-        
-        # Set table width
         table_width = Inches(10)
         table.width = int(table_width)
-        
-        # Calculate column widths
         day_col_width = Inches(1.2)
         room_col_width = (table_width - day_col_width) / (len(chart_df.columns) - 1)
         
-        # Set column widths
         for i, col in enumerate(table.columns):
-            if i == 0:
-                col.width = int(day_col_width)
-            else:
-                col.width = int(room_col_width)
+            col.width = int(day_col_width) if i == 0 else int(room_col_width)
         
-        # Format header row
         hdr_cells = table.rows[0].cells
         for i, col_name in enumerate(chart_df.columns):
             cell = hdr_cells[i]
-            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            para = cell.paragraphs[0]
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             
             if col_name == 'Day':
-                cell.paragraphs[0].clear()
-                run1 = cell.paragraphs[0].add_run("B = Morning")
+                para.clear()
+                run1 = para.add_run("B = Morning")
                 run1.font.name = 'Times New Roman'
                 run1.bold = True
                 run1.font.size = Pt(12)
                 run1.font.color.rgb = RGBColor(0, 0, 255)
-                
-                run2 = cell.paragraphs[0].add_run("\n")
-                run2.font.name = 'Times New Roman'
-                
-                run3 = cell.paragraphs[0].add_run("G = Afternoon")
+                para.add_run("\n")
+                run3 = para.add_run("G = Afternoon")
                 run3.font.name = 'Times New Roman'
                 run3.bold = True
                 run3.font.size = Pt(12)
                 run3.font.color.rgb = RGBColor(0, 128, 0)
-            elif col_name.startswith('ST'):
-                run = cell.paragraphs[0].add_run(str(col_name))
+            else:
+                run = para.add_run(str(col_name))
                 run.font.name = 'Times New Roman'
                 run.bold = True
                 run.font.size = Pt(18)
-            else:
-                run = cell.paragraphs[0].add_run(str(col_name))
-                run.font.name = 'Times New Roman'
-                run.bold = True
-                run.font.size = Pt(12)
         
-        # Add data rows
         for _, row in chart_df.iterrows():
             row_cells = table.add_row().cells
-            
             for j, val in enumerate(row):
                 para = row_cells[j].paragraphs[0]
                 col_name = chart_df.columns[j]
@@ -282,56 +254,32 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
                 elif col_name.startswith('ST'):
                     para.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     if isinstance(val, list) and val:
-                        morning_classes = []
-                        afternoon_classes = []
+                        morning = [e for e in val if is_before_noon(e['Begin_Time_Original'])]
+                        afternoon = [e for e in val if not is_before_noon(e['Begin_Time_Original'])]
                         
-                        for e in val:
-                            if is_before_noon(e['Begin_Time_Original']):
-                                morning_classes.append(e)
-                            else:
-                                afternoon_classes.append(e)
-                        
-                        only_afternoon = len(morning_classes) == 0 and len(afternoon_classes) > 0
-                        
-                        if only_afternoon:
+                        if not morning and afternoon:
                             row_cells[j].vertical_alignment = WD_ALIGN_VERTICAL.BOTTOM
                         else:
                             row_cells[j].vertical_alignment = WD_ALIGN_VERTICAL.TOP
+
+                        para.add_run("\n")
                         
-                        run = para.add_run("\n")
-                        run.font.name = 'Times New Roman'
-                        
-                        for idx, e in enumerate(morning_classes):
-                            if idx > 0:
-                                run = para.add_run("\n\n")
-                                run.font.name = 'Times New Roman'
-                            
-                            class_text = f"{e['Begin_Time']}-{e['End_Time']}\n{e['Course_Number']}\n{e['Title']}\n{e['Instructors']}"
+                        for e in morning:
+                            class_text = f"{e['Begin_Time']}-{e['End_Time']}\n{e['Course_Number']}\n{e['Title']}\n{e['Instructors']}\n\n"
                             run = para.add_run(class_text)
                             run.font.name = 'Times New Roman'
                             run.bold = True
                             run.font.size = Pt(9)
                             run.font.color.rgb = RGBColor(0, 0, 255)
                         
-                        if morning_classes and afternoon_classes:
-                            run = para.add_run("\n\n")
-                            run.font.name = 'Times New Roman'
-                        
-                        for idx, e in enumerate(afternoon_classes):
-                            if idx > 0:
-                                run = para.add_run("\n\n")
-                                run.font.name = 'Times New Roman'
-                            
-                            class_text = f"{e['Begin_Time']}-{e['End_Time']}\n{e['Course_Number']}\n{e['Title']}\n{e['Instructors']}"
+                        for e in afternoon:
+                            class_text = f"{e['Begin_Time']}-{e['End_Time']}\n{e['Course_Number']}\n{e['Title']}\n{e['Instructors']}\n\n"
                             run = para.add_run(class_text)
                             run.font.name = 'Times New Roman'
                             run.bold = True
                             run.font.size = Pt(9)
                             run.font.color.rgb = RGBColor(0, 128, 0)
-                    else:
-                        run = para.add_run('')
-                        run.font.name = 'Times New Roman'
-
+        
         doc_buffer = BytesIO()
         doc.save(doc_buffer)
         doc_buffer.seek(0)
@@ -339,39 +287,17 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
         return doc_buffer, len(entries)
     
     except Exception as e:
-        st.error(f"A critical error occurred before data processing could start: {str(e)}")
+        st.error(f"An unexpected error occurred: {str(e)}")
         return None, 0
 
-# (The rest of your Streamlit UI code is unchanged)
 # Streamlit UI
 st.sidebar.header("Settings")
-
-# Semester and Year selection
-st.sidebar.subheader("Semester & Year")
 col1, col2 = st.sidebar.columns(2)
-with col1:
-    semester = st.selectbox(
-        "Semester:",
-        options=["Spring", "Fall"],
-        index=0
-    )
-with col2:
-    year = st.number_input(
-        "Year:",
-        min_value=2020,
-        max_value=2100,
-        value=2025,
-        step=1
-    )
+semester = col1.selectbox("Semester:", options=["Spring", "Fall"], index=0)
+year = col2.number_input("Year:", min_value=2020, max_value=2100, value=2025, step=1)
 
-# Add validation
-if year < 2020 or year > 2100:
-    st.warning("Please enter a valid year between 2020 and 2100")
-
-# Set target rooms (no user selection needed)
 target_rooms = [225, 227, 229, 242, 325, 327, 330, 429]
 
-# File upload
 uploaded_file = st.file_uploader(
     "Upload your CSV or Excel file",
     type=['csv', 'xlsx'],
@@ -379,49 +305,25 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    st.success("File uploaded successfully!")
-    
-    # Show file info
     st.info(f"File name: {uploaded_file.name}")
-    
-    # Process button
     if st.button("Generate Room Chart", type="primary"):
-        if year < 2020 or year > 2100:
-            st.error("Please enter a valid year between 2020 and 2100 before generating the chart.")
-        else:
-            with st.spinner("Processing file and generating Word document..."):
-                doc_buffer, num_entries = process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year)
-                
-                if doc_buffer is not None:
-                    st.success(f"Document generated successfully! Found {num_entries} class entries.")
-                    
-                    # Download button with dynamic filename
-                    filename = f"{semester}_{year}_room_use_chart.docx"
-                    st.download_button(
-                        label="📥 Download Room Chart (Word Document)",
-                        data=doc_buffer,
-                        file_name=filename,
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                else:
-                    st.error("Failed to generate document. Please check your file format and the error messages above.")
+        with st.spinner("Processing file and generating Word document..."):
+            doc_buffer, num_entries = process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year)
+            if doc_buffer:
+                st.success(f"Document generated successfully! Found {num_entries} class entries.")
+                filename = f"{semester}_{year}_room_use_chart.docx"
+                st.download_button(
+                    label="📥 Download Room Chart (Word Document)",
+                    data=doc_buffer,
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+            else:
+                st.error("Failed to generate document. Please check the file format and error messages.")
 
-# Instructions
 with st.expander("📋 Instructions"):
     st.markdown("""
-    ### How to use this tool:
-    1.  Upload your CSV or Excel file above.
-    2.  Select the semester and year in the sidebar.
-    3.  Click "Generate Room Chart".
-    4.  Download the Word document.
-    5.  **Review & Finalize**: Always cross-check the generated document with the original schedule and make any necessary final edits.
-    
-    ### How to create the input file:
-    -   Go to the class schedule website: https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
-    -   Select the desired semester and "Biology" as the department, then click Submit.
-    -   Copy all data from the "CRN:" column to the "Location:" column.
-    -   Paste the data into Excel and save as a `.csv` or `.xlsx` file.
-    
-    ### Output:
-    -   A formatted Room Use Chart in a Word document.
+    1.  Upload your CSV or Excel file.
+    2.  Select the semester and year.
+    3.  Click "Generate Room Chart" and download the Word document.
     """)
