@@ -46,16 +46,23 @@ def parse_time(time_str):
 def extract_room_number(location):
     if pd.isna(location) or location == '':
         return None
-    match = re.findall(r'\d+', str(location))
+    
+    # Convert to string if it's not already
+    location_str = str(location)
+    match = re.findall(r'\d+', location_str)
     return int(match[-1]) if match else None
 
 def extract_last_name(instructor):
     if pd.isna(instructor) or instructor == '':
         return ''
+    
+    # Convert to string if it's not already
+    instructor_str = str(instructor)
+    
     # Special case for "Wilnelia Recart Gonzalez"
-    if 'Wilnelia Recart Gonzalez' in instructor:
+    if 'Wilnelia Recart Gonzalez' in instructor_str:
         return 'RECART'
-    return instructor.strip().split(' ')[-1].upper()
+    return instructor_str.strip().split(' ')[-1].upper()
 
 def format_time(time_str):
     if pd.isna(time_str) or time_str == '':
@@ -80,6 +87,10 @@ def format_time(time_str):
 def abbreviate_title(title):
     if pd.isna(title) or title == '':
         return ''
+    
+    # Convert to string if it's not already
+    title = str(title)
+    
     abbreviations = {
         'Anatomy & Physiology': 'A & P',
         'Bioenergetics and Systems': 'Bioenergetics',
@@ -112,6 +123,10 @@ def abbreviate_title(title):
 def expand_days(days_str):
     if pd.isna(days_str) or days_str == '':
         return []
+    
+    # Convert to string if it's not already
+    days_str = str(days_str)
+    
     mapping = {'M': 'Mon', 'T': 'Tue', 'W': 'Wed', 'R': 'Thu', 'F': 'Fri', 'S': 'Sat', 'U': 'Sun'}
     return [mapping[c] for c in days_str if c in mapping]
 
@@ -253,23 +268,37 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
         
         entries = []
         
-        for _, row in df.iterrows():
-            room = extract_room_number(row.get(location_col))
-            if room not in target_rooms:
-                continue
-            days = expand_days(row.get(days_col))
-            for day in days:
-                entries.append({
-                    'Day': day,
-                    'Room': room,
-                    'Course_Number': str(row.get(course_col, '')).replace('BIOL', 'BIO'),
-                    'Title': abbreviate_title(row.get(title_col, '')),
-                    'Begin_Time': format_time(row.get(begin_col, '')),
-                    'End_Time': format_time(row.get(end_col, '')),
-                    'Instructors': extract_last_name(row.get(instructor_col, '')),
-                    'Begin_Time_Parsed': parse_time(row.get(begin_col, '')),
-                    'Begin_Time_Original': row.get(begin_col, '')
-                })
+        for idx, row in df.iterrows():
+            try:
+                # Add debugging for problematic rows
+                room = extract_room_number(row.get(location_col))
+                if room not in target_rooms:
+                    continue
+                    
+                days = expand_days(row.get(days_col))
+                for day in days:
+                    # Convert all values to strings safely
+                    course_num = str(row.get(course_col, '')).replace('BIOL', 'BIO')
+                    title = abbreviate_title(row.get(title_col, ''))
+                    begin_time_raw = row.get(begin_col, '')
+                    end_time_raw = row.get(end_col, '')
+                    instructor = extract_last_name(row.get(instructor_col, ''))
+                    
+                    entries.append({
+                        'Day': day,
+                        'Room': room,
+                        'Course_Number': course_num,
+                        'Title': title,
+                        'Begin_Time': format_time(begin_time_raw),
+                        'End_Time': format_time(end_time_raw),
+                        'Instructors': instructor,
+                        'Begin_Time_Parsed': parse_time(begin_time_raw),
+                        'Begin_Time_Original': begin_time_raw
+                    })
+            except Exception as e:
+                st.error(f"Error processing row {idx}: {str(e)}")
+                st.write(f"Row data: {dict(row)}")
+                raise e
         
         # Sort entries
         day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -532,7 +561,7 @@ with st.expander("📋 Instructions"):
     -   The tool will try to automatically detect column names even if they don't match exactly.
     
     ### Output:
-    -   A formatted Room Use Chart in a Word document with morning classes in blue and afternoon classes in green.
+    -   A formatted Room Use Chart in a Word document with morning classes in blue and afternoon classes in green.HAHAHAHA
     """)
 
 # Add debug section for troubleshooting
