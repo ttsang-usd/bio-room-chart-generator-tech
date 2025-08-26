@@ -505,10 +505,6 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     st.success("File uploaded successfully!")
     
-    # Show file info
-    file_size = len(uploaded_file.getvalue()) / 1024  # Size in KB
-    st.info(f"File: {uploaded_file.name} ({file_size:.1f} KB)")
-    
     # Process button
     if st.button("Generate Room Chart", type="primary"):
         if year < 2020 or year > 2100:
@@ -518,8 +514,6 @@ if uploaded_file is not None:
                 doc_buffer, num_entries = process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year)
                 
                 if doc_buffer is not None:
-                    st.success(f"Document generated successfully! Found {num_entries} class entries.")
-                    
                     # Download button with dynamic filename
                     filename = f"{semester}_{year}_room_use_chart.docx"
                     st.download_button(
@@ -547,26 +541,7 @@ with st.expander("📋 Instructions"):
     -   Copy all data from the "CRN:" column to the "Location:" column.
     -   Paste the data into Excel and save as a `.csv`, `.xlsx`, or `.xls` file.
     
-    ### Troubleshooting:
-    -   If you encounter errors, the tool will now show you which columns were detected and which are missing.
-    -   Make sure your file contains columns for: Location, Course Number, Title, Days, Begin Time, End Time, and Instructors.
-    -   The tool will try to automatically detect column names even if they don't match exactly.
-    
     ### Output:
-    -   A formatted Room Use Chart in a Word document with morning classes in blue and afternoon classes in green.
+    -   A formatted Room Use Chart in a Word document.
     """)
 
-# Add debug section for troubleshooting
-with st.expander("🔧 Debug Information"):
-    st.markdown("""
-    ### Supported File Formats:
-    - **CSV files**: .csv (with UTF-8, Latin-1, or CP1252 encoding)
-    - **Excel files**: .xlsx, .xls
-    
-    ### Target Rooms:
-    The tool automatically filters for these biology lab rooms: 225, 227, 229, 242, 325, 327, 330, 429
-    
-    ### Column Detection:
-    The tool will automatically try to find columns containing these keywords:
-    - Location, Course Number/Course, Title, Days, Begin Time/Start Time, End Time, Instructors, Seats Remaining
-    """)
