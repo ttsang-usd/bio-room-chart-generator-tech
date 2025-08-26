@@ -24,7 +24,16 @@ def parse_time(time_str):
     if pd.isna(time_str) or time_str == '':
         return None
     try:
-        time, period = time_str.strip().split(' ')
+        # Handle datetime.time objects from Excel
+        if hasattr(time_str, 'hour'):  # It's a time object
+            return time_str.hour * 60 + time_str.minute
+        
+        # Handle string format
+        time_str = str(time_str).strip()
+        if not time_str:
+            return None
+            
+        time, period = time_str.split(' ')
         hours, minutes = map(int, time.split(':'))
         if period.upper() == 'PM' and hours != 12:
             hours += 12
@@ -51,7 +60,22 @@ def extract_last_name(instructor):
 def format_time(time_str):
     if pd.isna(time_str) or time_str == '':
         return ''
-    return re.sub(r'\s*(AM|PM)', '', str(time_str), flags=re.IGNORECASE)
+    
+    # Handle datetime.time objects from Excel
+    if hasattr(time_str, 'hour'):  # It's a time object
+        hour = time_str.hour
+        minute = time_str.minute
+        # Convert to 12-hour format string without AM/PM
+        if hour == 0:
+            return f"12:{minute:02d}"
+        elif hour <= 12:
+            return f"{hour}:{minute:02d}"
+        else:
+            return f"{hour-12}:{minute:02d}"
+    
+    # Handle string format
+    time_str = str(time_str).strip()
+    return re.sub(r'\s*(AM|PM)', '', time_str, flags=re.IGNORECASE)
 
 def abbreviate_title(title):
     if pd.isna(title) or title == '':
@@ -96,7 +120,16 @@ def is_before_noon(time_str):
     if pd.isna(time_str) or time_str == '':
         return False
     try:
-        time_parts = time_str.strip().split(' ')
+        # Handle datetime.time objects from Excel
+        if hasattr(time_str, 'hour'):  # It's a time object
+            return time_str.hour < 12
+        
+        # Handle string format
+        time_str = str(time_str).strip()
+        if not time_str:
+            return False
+            
+        time_parts = time_str.split(' ')
         if len(time_parts) < 2:
             return False
         time_part = time_parts[0]
@@ -129,12 +162,12 @@ def load_data_file(uploaded_file):
         elif file_extension in ['xlsx', 'xls']:
             # Handle Excel files with multiple possible formats
             try:
-                # First, try reading with multi-level headers
-                df = pd.read_excel(uploaded_file, header=[0, 1], dtype=str, engine='openpyxl' if file_extension == 'xlsx' else None)
+                # First, try reading with multi-level headers, but don't force string conversion for time columns
+                df = pd.read_excel(uploaded_file, header=[0, 1], engine='openpyxl' if file_extension == 'xlsx' else None)
             except:
                 # If that fails, try single header
                 uploaded_file.seek(0)
-                df_temp = pd.read_excel(uploaded_file, header=0, dtype=str, engine='openpyxl' if file_extension == 'xlsx' else None)
+                df_temp = pd.read_excel(uploaded_file, header=0, engine='openpyxl' if file_extension == 'xlsx' else None)
                 # Convert to multi-level format if needed
                 if len(df_temp.columns) > 0:
                     # Create a dummy second level for consistency
