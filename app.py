@@ -543,7 +543,7 @@ if uploaded_file is not None:
 with st.expander("📋 Instructions"):
     st.markdown("""
     ### How to use this tool:
-    1.  Upload your CSV or Excel file above (supports .csv, .xlsx, .xls formats). HAHAHAHA
+    1.  Upload your CSV or Excel file above (supports .csv, .xlsx, .xls formats).
     2.  Select the semester and year in the sidebar.
     3.  Click "Generate Room Chart".
     4.  Download the Word document.
