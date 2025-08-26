@@ -7,6 +7,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL
 from io import BytesIO
 import base64
+import datetime
 
 # Set page configuration
 st.set_page_config(
@@ -20,19 +21,27 @@ st.title("🧪 Biology Lab Room Chart Generator")
 st.markdown("Upload your CSV or Excel file to generate a Room Use Chart as a Word document. Specify the semester and year on the left sidebar.")
 
 # Helper functions
-def parse_time(time_str):
-    if pd.isna(time_str) or time_str == '':
+def parse_time(time_val):
+    if pd.isna(time_val) or time_val == '':
         return None
-    try:
-        time, period = time_str.strip().split(' ')
-        hours, minutes = map(int, time.split(':'))
-        if period.upper() == 'PM' and hours != 12:
-            hours += 12
-        if period.upper() == 'AM' and hours == 12:
-            hours = 0
-        return hours * 60 + minutes
-    except:
-        return None
+    
+    # If it's a time object (from Excel)
+    if isinstance(time_val, datetime.time):
+        return time_val.hour * 60 + time_val.minute
+
+    # If it's a string (from CSV)
+    if isinstance(time_val, str):
+        try:
+            time, period = time_val.strip().split(' ')
+            hours, minutes = map(int, time.split(':'))
+            if period.upper() == 'PM' and hours != 12:
+                hours += 12
+            if period.upper() == 'AM' and hours == 12:
+                hours = 0
+            return hours * 60 + minutes
+        except:
+            return None
+    return None
 
 def extract_room_number(location):
     if pd.isna(location) or location == '':
@@ -48,10 +57,24 @@ def extract_last_name(instructor):
         return 'RECART'
     return instructor.strip().split(' ')[-1].upper()
 
-def format_time(time_str):
-    if pd.isna(time_str) or time_str == '':
+def format_time(time_val):
+    if pd.isna(time_val) or time_val == '':
         return ''
-    return re.sub(r'\s*(AM|PM)', '', str(time_str), flags=re.IGNORECASE)
+    
+    # If it's a time object (from Excel), format it to "H:MM"
+    if isinstance(time_val, datetime.time):
+        formatted_time = time_val.strftime('%I:%M')
+        # Remove leading zero from hour (e.g., "04:30" -> "4:30")
+        if formatted_time.startswith('0'):
+            return formatted_time[1:]
+        return formatted_time
+
+    # If it's a string (from CSV), use the original regex method
+    if isinstance(time_val, str):
+        return re.sub(r'\s*(AM|PM)', '', time_val, flags=re.IGNORECASE)
+
+    return str(time_val) # Fallback for any other types
+
 
 def abbreviate_title(title):
     if pd.isna(title) or title == '':
@@ -91,24 +114,30 @@ def expand_days(days_str):
     mapping = {'M': 'Mon', 'T': 'Tue', 'W': 'Wed', 'R': 'Thu', 'F': 'Fri', 'S': 'Sat', 'U': 'Sun'}
     return [mapping[c] for c in days_str if c in mapping]
 
-def is_before_noon(time_str):
-    """Check if a time string represents a time before 12:00 PM"""
-    if pd.isna(time_str) or time_str == '':
+def is_before_noon(time_val):
+    if pd.isna(time_val) or time_val == '':
         return False
-    try:
-        time_parts = time_str.strip().split(' ')
-        if len(time_parts) < 2:
+
+    # If it's a time object (from Excel)
+    if isinstance(time_val, datetime.time):
+        return time_val.hour < 12
+
+    # If it's a string (from CSV)
+    if isinstance(time_val, str):
+        try:
+            time_parts = time_val.strip().split(' ')
+            if len(time_parts) < 2: return False
+            time_part = time_parts[0]
+            period = time_parts[1].upper()
+            hours, minutes = map(int, time_part.split(':'))
+            if period == 'PM' and hours != 12:
+                hours += 12
+            elif period == 'AM' and hours == 12:
+                hours = 0
+            return hours < 12
+        except:
             return False
-        time_part = time_parts[0]
-        period = time_parts[1].upper()
-        hours, minutes = map(int, time_part.split(':'))
-        if period == 'PM' and hours != 12:
-            hours += 12
-        elif period == 'AM' and hours == 12:
-            hours = 0
-        return hours < 12
-    except:
-        return False
+    return False
 
 def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
     """Process the CSV or Excel file and generate the Word document"""
@@ -117,8 +146,7 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, header=[0, 1])
         elif uploaded_file.name.endswith('.xlsx'):
-            # Force all columns to be read as strings to prevent time conversion issues
-            df = pd.read_excel(uploaded_file, header=[0, 1], dtype=str)
+            df = pd.read_excel(uploaded_file, header=[0, 1])
         else:
             st.error("Unsupported file type. Please upload a CSV or Excel file.")
             return None, 0
