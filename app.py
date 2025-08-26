@@ -205,20 +205,12 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
             st.error(f"Error loading file: {error}")
             return None, 0
         
-        # Show file info for debugging
-        st.info(f"File loaded successfully. Shape: {df.shape}")
-        st.info(f"Columns detected: {list(df.columns)}")
-        
         # Combine the multi-level headers into single column names
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = [
                 f"{a} {b}".strip() if not pd.isna(a) and not pd.isna(b) and str(b) != 'Unnamed: 0_level_1' else (str(a) if not pd.isna(a) else str(b))
                 for a, b in df.columns
             ]
-        
-        # Display first few rows for debugging
-        with st.expander("📊 Preview of loaded data (first 5 rows)"):
-            st.dataframe(df.head())
         
         # Try to identify the correct column names (more flexible matching)
         def find_column(patterns, columns):
