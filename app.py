@@ -17,9 +17,9 @@ st.set_page_config(
 
 # Title and description
 st.title("🧪 Biology Lab Room Chart Generator")
-st.markdown("Upload your CSV file to generate a Room Use Chart as a Word document. Specify the semester and year on the left sidebar.")
+st.markdown("Upload your CSV or Excel file to generate a Room Use Chart as a Word document. Specify the semester and year on the left sidebar.")
 
-# Helper functions (same as your original code)
+# Helper functions
 def parse_time(time_str):
     if pd.isna(time_str) or time_str == '':
         return None
@@ -43,6 +43,9 @@ def extract_room_number(location):
 def extract_last_name(instructor):
     if pd.isna(instructor) or instructor == '':
         return ''
+    # Special case for "Wilnelia Recart Gonzalez"
+    if 'Wilnelia Recart Gonzalez' in instructor:
+        return 'RECART'
     return instructor.strip().split(' ')[-1].upper()
 
 def format_time(time_str):
@@ -108,10 +111,16 @@ def is_before_noon(time_str):
         return False
 
 def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
-    """Process the CSV file and generate the Word document"""
+    """Process the CSV or Excel file and generate the Word document"""
     try:
-        # Load the CSV file with multi-level headers
-        df = pd.read_csv(uploaded_file, header=[0, 1])
+        # Load the uploaded file with multi-level headers
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file, header=[0, 1])
+        elif uploaded_file.name.endswith('.xlsx'):
+            df = pd.read_excel(uploaded_file, header=[0, 1])
+        else:
+            st.error("Unsupported file type. Please upload a CSV or Excel file.")
+            return None, 0
         
         # Combine the multi-level headers into single column names
         df.columns = [
@@ -360,9 +369,9 @@ target_rooms = [225, 227, 229, 242, 325, 327, 330, 429]
 
 # File upload
 uploaded_file = st.file_uploader(
-    "Upload your CSV file",
-    type=['csv'],
-    help="Upload a CSV file with course schedule data"
+    "Upload your CSV or Excel file",
+    type=['csv', 'xlsx'],
+    help="Upload a CSV or Excel file with course schedule data"
 )
 
 if uploaded_file is not None:
@@ -376,7 +385,7 @@ if uploaded_file is not None:
         if year < 2020 or year > 2100:
             st.error("Please enter a valid year between 2020 and 2100 before generating the chart.")
         else:
-            with st.spinner("Processing CSV and generating Word document..."):
+            with st.spinner("Processing file and generating Word document..."):
                 doc_buffer, num_entries = process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year)
                 
                 if doc_buffer is not None:
@@ -391,24 +400,24 @@ if uploaded_file is not None:
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                 else:
-                    st.error("Failed to generate document. Please check your CSV file format.")
+                    st.error("Failed to generate document. Please check your file format.")
 
 # Instructions
 with st.expander("📋 Instructions"):
     st.markdown("""
     ### How to use this tool:
-    1. Upload your CSV file above
-    2. Select the semester in the sidebar
-    3. Click "Generate Room Chart"
-    4. Download the Word document
-    5. Review & Finalize: cross-check with the original schedule and make final edits
+    1.  Upload your CSV or Excel file above.
+    2.  Select the semester and year in the sidebar.
+    3.  Click "Generate Room Chart".
+    4.  Download the Word document.
+    5.  **Review & Finalize**: Always cross-check the generated document with the original schedule and make any necessary final edits.
     
-    ### How to create the CSV file:
-    - Get class schedule from https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
-    - Select the semester and "Biology" as the department, then click Submit
-    - Copy all data from the "CRN:" to the "Location:" column. 
-    - Paste into Excel and save as a .csv file
+    ### How to create the input file:
+    -   Go to the class schedule website: https://usdssb.sandiego.edu/prod/usd_course_query_faculty.p_start 
+    -   Select the desired semester and "Biology" as the department, then click Submit.
+    -   Copy all data from the "CRN:" column to the "Location:" column.
+    -   Paste the data into Excel and save as a `.csv` or `.xlsx` file.
     
     ### Output:
-    - Formatted Room Use Chart in a Word document
+    -   A formatted Room Use Chart in a Word document.
     """)
