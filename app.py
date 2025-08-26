@@ -542,8 +542,8 @@ if uploaded_file is not None:
 # Instructions
 with st.expander("📋 Instructions"):
     st.markdown("""
-    ### How to use this tool: HAHAHAHA
-    1.  Upload your CSV or Excel file above (supports .csv, .xlsx, .xls formats).
+    ### How to use this tool:
+    1.  Upload your CSV or Excel file above (supports .csv, .xlsx, .xls formats). HAHAHAHA
     2.  Select the semester and year in the sidebar.
     3.  Click "Generate Room Chart".
     4.  Download the Word document.
@@ -561,7 +561,7 @@ with st.expander("📋 Instructions"):
     -   The tool will try to automatically detect column names even if they don't match exactly.
     
     ### Output:
-    -   A formatted Room Use Chart in a Word document with morning classes in blue and afternoon classes in green.HAHAHAHA
+    -   A formatted Room Use Chart in a Word document with morning classes in blue and afternoon classes in green.
     """)
 
 # Add debug section for troubleshooting
