@@ -51,7 +51,7 @@ def extract_last_name(instructor):
 def format_time(time_str):
     if pd.isna(time_str) or time_str == '':
         return ''
-    return re.sub(r'\s*(AM|PM)', '', time_str, flags=re.IGNORECASE)
+    return re.sub(r'\s*(AM|PM)', '', str(time_str), flags=re.IGNORECASE)
 
 def abbreviate_title(title):
     if pd.isna(title) or title == '':
@@ -117,7 +117,8 @@ def process_csv_and_generate_doc(uploaded_file, target_rooms, semester, year):
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, header=[0, 1])
         elif uploaded_file.name.endswith('.xlsx'):
-            df = pd.read_excel(uploaded_file, header=[0, 1])
+            # Force all columns to be read as strings to prevent time conversion issues
+            df = pd.read_excel(uploaded_file, header=[0, 1], dtype=str)
         else:
             st.error("Unsupported file type. Please upload a CSV or Excel file.")
             return None, 0
