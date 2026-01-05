@@ -112,6 +112,7 @@ def abbreviate_title(title):
         'Invertebrate Zoology': 'Invert Zoo',
         'Peoples, Plagues and Microbes': 'Ppl Plag Micro',
         'Ecol Evol Infectious Disease': 'EEID',
+        'Plant Evolution and Diversity': 'Plant Evo & Div',
         'Immunology': 'Immuno',
         'Laboratory': '',
         'Lab': ''
